@@ -1,7 +1,8 @@
 "use client";
 
-import { BarChart3, Clock3, ListOrdered, Timer } from "lucide-react";
+import { BarChart3, Clock3, ListOrdered, LogOut, MapPinned, Search, Timer } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { QueueTable } from "@/components/QueueTable";
 import { QueueLengthChart } from "@/components/charts/QueueLengthChart";
 import { ServiceTimeChart } from "@/components/charts/ServiceTimeChart";
@@ -10,7 +11,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { useFacilities } from "@/hooks/useFacilities";
 import { useRealtimeQueue } from "@/hooks/useRealtimeQueue";
 import { fetchAnalytics } from "@/services/analyticsService";
-import { createFacility } from "@/services/facilityService";
+import { createFacility, searchPlaces } from "@/services/facilityService";
 import {
   callNext,
   completeToken,
@@ -39,12 +40,19 @@ const emptyAnalytics: AnalyticsPayload = {
 };
 
 export default function AdminPage() {
+  const router = useRouter();
   const { facilities } = useFacilities();
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>("");
   const { tokens } = useRealtimeQueue(selectedFacilityId);
   const [analytics, setAnalytics] = useState<AnalyticsPayload>(emptyAnalytics);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [overrideValue, setOverrideValue] = useState("");
+  const [facilityMessage, setFacilityMessage] = useState<string | null>(null);
+  const [facilityError, setFacilityError] = useState<string | null>(null);
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [placeResults, setPlaceResults] = useState<
+    Array<{ name: string; address: string; lat: number; lng: number; mapsUrl: string }>
+  >([]);
   const [createForm, setCreateForm] = useState({
     name: "",
     lat: "",
@@ -126,15 +134,67 @@ export default function AdminPage() {
 
   async function handleCreateFacility(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFacilityError(null);
+    setFacilityMessage(null);
     setBusyAction("create-facility");
-    await createFacility({
-      name: createForm.name,
-      lat: Number(createForm.lat),
-      lng: Number(createForm.lng),
-      medianServiceTime: Number(createForm.medianServiceTime)
-    });
-    setBusyAction(null);
-    setCreateForm({ name: "", lat: "", lng: "", medianServiceTime: "3" });
+
+    try {
+      const result = await createFacility({
+        name: createForm.name,
+        lat: Number(createForm.lat),
+        lng: Number(createForm.lng),
+        medianServiceTime: Number(createForm.medianServiceTime)
+      });
+
+      setSelectedFacilityId(result.facilityId);
+      setFacilityMessage("Facility created successfully. It should appear in the selector as Firestore syncs.");
+      setCreateForm({ name: "", lat: "", lng: "", medianServiceTime: "3" });
+      setPlaceQuery("");
+      setPlaceResults([]);
+    } catch (error) {
+      setFacilityError(
+        error instanceof Error
+          ? error.message
+          : "Facility creation failed. Check Firebase Admin credentials and Firestore access."
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handlePlaceSearch() {
+    setFacilityError(null);
+    setFacilityMessage(null);
+    setBusyAction("search-place");
+
+    try {
+      const response = await searchPlaces(placeQuery);
+      setPlaceResults(response.results);
+      if (!response.results.length) {
+        setFacilityMessage("No places matched that search. Try a more specific facility name or city.");
+      }
+    } catch (error) {
+      setFacilityError(error instanceof Error ? error.message : "Unable to search places.");
+      setPlaceResults([]);
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  function handleSelectPlace(result: { name: string; address: string; lat: number; lng: number; mapsUrl: string }) {
+    setCreateForm((current) => ({
+      ...current,
+      name: result.name,
+      lat: result.lat.toString(),
+      lng: result.lng.toString()
+    }));
+    setFacilityMessage(`Picked ${result.name}. Coordinates are now filled from Google Maps search.`);
+  }
+
+  async function handleLogout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.push("/admin/login");
+    router.refresh();
   }
 
   return (
@@ -148,6 +208,16 @@ export default function AdminPage() {
               Track live service pace, override timings, rearrange users, and keep the queue moving even when no-shows
               happen.
             </p>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+              >
+                <LogOut className="h-4 w-4" />
+                Log Out
+              </button>
+            </div>
             <select
               value={selectedFacilityId}
               onChange={(event) => setSelectedFacilityId(event.target.value)}
@@ -165,8 +235,57 @@ export default function AdminPage() {
           <form onSubmit={handleCreateFacility} className="panel space-y-4 p-6">
             <div>
               <p className="text-lg font-semibold text-ink">Create Facility</p>
-              <p className="text-sm text-slate-500">Seed new queue locations without leaving the dashboard.</p>
+              <p className="text-sm text-slate-500">
+                Search the place first, pick the correct Google Maps result, then create the facility.
+              </p>
             </div>
+            <div className="space-y-3">
+              <label htmlFor="placeQuery" className="text-sm font-medium text-slate-600">
+                Search facility on Google Maps
+              </label>
+              <div className="flex gap-3">
+                <input
+                  id="placeQuery"
+                  placeholder="Example: Ruby Hall Clinic Pune"
+                  value={placeQuery}
+                  onChange={(event) => setPlaceQuery(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-ink"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handlePlaceSearch()}
+                  disabled={busyAction === "search-place" || !placeQuery.trim()}
+                  className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  <Search className="h-4 w-4" />
+                  {busyAction === "search-place" ? "Searching..." : "Search"}
+                </button>
+              </div>
+            </div>
+            {placeResults.length ? (
+              <div className="space-y-3 rounded-3xl bg-slate-50 p-4">
+                {placeResults.map((result) => (
+                  <div
+                    key={`${result.name}-${result.address}`}
+                    className="flex items-start justify-between rounded-2xl border border-slate-200 bg-white p-4"
+                  >
+                    <button type="button" onClick={() => handleSelectPlace(result)} className="flex-1 text-left">
+                      <p className="font-semibold text-ink">{result.name}</p>
+                      <p className="mt-1 text-sm text-slate-500">{result.address}</p>
+                    </button>
+                    <a
+                      href={result.mapsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="ml-4 inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700"
+                    >
+                      <MapPinned className="h-4 w-4 text-coral" />
+                      Open Map
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <input
               placeholder="Facility name"
               value={createForm.name}
@@ -193,9 +312,15 @@ export default function AdminPage() {
               onChange={(event) => setCreateForm((current) => ({ ...current, medianServiceTime: event.target.value }))}
               className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-ink"
             />
+            {facilityMessage ? <p className="text-sm text-emerald-700">{facilityMessage}</p> : null}
+            {facilityError ? <p className="text-sm text-red-600">{facilityError}</p> : null}
+            <p className="text-xs text-slate-500">
+              If creation feels stuck, the most common cause is missing `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`,
+              or `FIREBASE_PRIVATE_KEY` on the server.
+            </p>
             <button
               type="submit"
-              disabled={busyAction === "create-facility"}
+              disabled={busyAction === "create-facility" || !createForm.name || !createForm.lat || !createForm.lng}
               className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
             >
               {busyAction === "create-facility" ? "Creating..." : "Create Facility"}

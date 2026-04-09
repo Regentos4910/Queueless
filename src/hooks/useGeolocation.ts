@@ -9,14 +9,24 @@ type GeolocationState = {
   error: string | null;
 };
 
-export function useGeolocation() {
+export function useGeolocation({ autoStart = true }: { autoStart?: boolean } = {}) {
   const [state, setState] = useState<GeolocationState>({
     coords: null,
-    loading: true,
+    loading: autoStart,
     error: null
   });
+  const [requested, setRequested] = useState(autoStart);
+
+  function requestLocation() {
+    setRequested(true);
+    setState((current) => ({ ...current, loading: true, error: null }));
+  }
 
   useEffect(() => {
+    if (!requested) {
+      return;
+    }
+
     if (!navigator.geolocation) {
       setState({ coords: null, loading: false, error: "Geolocation is not supported in this browser." });
       return;
@@ -44,7 +54,7 @@ export function useGeolocation() {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  }, [requested]);
 
-  return state;
+  return { ...state, requestLocation, requested };
 }

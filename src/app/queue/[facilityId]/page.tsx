@@ -13,7 +13,9 @@ export default function JoinQueuePage() {
   const params = useParams();
   const facilityId = Array.isArray(params.facilityId) ? params.facilityId[0] : params.facilityId;
   const router = useRouter();
-  const { coords, error: geolocationError, loading: locationLoading } = useGeolocation();
+  const { coords, error: geolocationError, loading: locationLoading, requestLocation, requested } = useGeolocation({
+    autoStart: false
+  });
   const [facility, setFacility] = useState<Facility | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -108,7 +110,7 @@ export default function JoinQueuePage() {
             </div>
             <button
               type="submit"
-              disabled={busy || locationLoading}
+              disabled={busy || locationLoading || !coords}
               className="rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
             >
               {busy ? "Assigning Token..." : "Request Smart Token"}
@@ -126,10 +128,25 @@ export default function JoinQueuePage() {
           <div className="panel p-5">
             <p className="text-sm text-slate-500">Location status</p>
             <p className="mt-2 text-lg font-semibold text-ink">
-              {coords ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : "Waiting for geolocation permission"}
+              {coords
+                ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+                : requested
+                  ? "Trying to fetch your live location"
+                  : "Location permission not requested yet"}
             </p>
             <p className="mt-2 text-sm text-slate-500">
               QueueLess uses your location to estimate ETA and later confirm arrival within the facility geofence.
+            </p>
+            <button
+              type="button"
+              onClick={requestLocation}
+              disabled={locationLoading}
+              className="mt-4 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+            >
+              {locationLoading ? "Fetching Location..." : coords ? "Refresh My Location" : "Allow Location Access"}
+            </button>
+            <p className="mt-3 text-xs text-slate-500">
+              You need to share your location before joining so we can calculate travel time and assign a fair token.
             </p>
           </div>
         </aside>

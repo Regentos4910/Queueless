@@ -1,3 +1,12 @@
+async function readError(response: Response, fallback: string) {
+  try {
+    const payload = (await response.json()) as { error?: string };
+    return payload.error ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function joinQueue(payload: {
   facilityId: string;
   userName: string;
@@ -11,7 +20,7 @@ export async function joinQueue(payload: {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to join queue.");
+    throw new Error(await readError(response, "Failed to join queue."));
   }
 
   return (await response.json()) as {
@@ -30,7 +39,7 @@ export async function callNext(facilityId: string) {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to call next user.");
+    throw new Error(await readError(response, "Failed to call next user."));
   }
 
   return response.json();
@@ -44,7 +53,7 @@ export async function completeToken(tokenId: string) {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to complete token.");
+    throw new Error(await readError(response, "Failed to complete token."));
   }
 
   return response.json();
@@ -58,7 +67,7 @@ export async function rearrangeToken(payload: { facilityId: string; tokenId: str
   });
 
   if (!response.ok) {
-    throw new Error("Failed to rearrange token.");
+    throw new Error(await readError(response, "Failed to rearrange token."));
   }
 
   return response.json();
@@ -76,7 +85,7 @@ export async function updateTokenStatus(payload: {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to update token status.");
+    throw new Error(await readError(response, "Failed to update token status."));
   }
 
   return response.json();
@@ -93,7 +102,7 @@ export async function updateArrival(payload: {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to update arrival.");
+    throw new Error(await readError(response, "Failed to update arrival."));
   }
 
   return response.json();
@@ -107,7 +116,7 @@ export async function overrideServiceTime(facilityId: string, adminOverrideTime:
   });
 
   if (!response.ok) {
-    throw new Error("Failed to override service time.");
+    throw new Error(await readError(response, "Failed to override service time."));
   }
 
   return response.json();

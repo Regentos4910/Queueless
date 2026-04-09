@@ -25,6 +25,8 @@ FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY=
 GOOGLE_MAPS_API_KEY=
+ADMIN_USERNAME=
+ADMIN_PASSWORD=
 ```
 
 ## Development
@@ -41,3 +43,8 @@ npm run dev
 - `serviceLogs`
 
 The app expects facility documents with `name`, `location`, `medianServiceTime`, and `adminOverrideTime`.
+
+## Admin Access
+
+The admin dashboard is protected by a simple cookie-based login intended for a hackathon MVP. Set `ADMIN_USERNAME` and
+`ADMIN_PASSWORD` in your environment before using `/admin`.
