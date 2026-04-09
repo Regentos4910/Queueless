@@ -3,26 +3,25 @@
 import { useMemo, useState } from "react";
 import { FacilityCard } from "@/components/FacilityCard";
 import { useFacilities } from "@/hooks/useFacilities";
-import { useRealtimeQueue } from "@/hooks/useRealtimeQueue";
+import { useAllTokens } from "@/hooks/useAllTokens";
 import { enrichFacilities } from "@/services/facilityService";
 
 export default function SearchPage() {
   const { facilities, loading } = useFacilities();
+  const { tokens } = useAllTokens();
   const [query, setQuery] = useState("");
 
   const waitingCounts = useMemo(() => {
     const counts = new Map<string, number>();
 
-    facilities.forEach((facility) => {
-      counts.set(facility.id, 0);
+    tokens.forEach((token) => {
+      if (token.status === "waiting") {
+        counts.set(token.facilityId, (counts.get(token.facilityId) ?? 0) + 1);
+      }
     });
 
     return counts;
-  }, [facilities]);
-
-  facilities.forEach((facility) => {
-    useRealtimeQueue(facility.id);
-  });
+  }, [tokens]);
 
   const filtered = useMemo(() => {
     const enriched = enrichFacilities(facilities, waitingCounts);
