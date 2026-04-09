@@ -1,6 +1,6 @@
 # QueueLess
 
-QueueLess is a Vercel-friendly smart queue management MVP built with Next.js App Router and Firebase Firestore.
+QueueLess is a Vercel-friendly smart queue management MVP built with Next.js App Router and Firebase Firestore made by Viraj Makwana And Shashank Mishra.
 
 ## Features
 
