@@ -315,8 +315,7 @@ export default function AdminPage() {
             {facilityMessage ? <p className="text-sm text-emerald-700">{facilityMessage}</p> : null}
             {facilityError ? <p className="text-sm text-red-600">{facilityError}</p> : null}
             <p className="text-xs text-slate-500">
-              If creation feels stuck, the most common cause is missing `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`,
-              or `FIREBASE_PRIVATE_KEY` on the server.
+              
             </p>
             <button
               type="submit"

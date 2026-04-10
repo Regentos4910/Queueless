@@ -7,7 +7,7 @@ import clsx from "clsx";
 const links = [
   { href: "/", label: "Home" },
   { href: "/search", label: "Find Queues" },
-  { href: "/admin", label: "Admin" }
+  { href: "/admin/login?redirectTo=/admin", label: "Admin" }
 ];
 
 export function Navbar() {

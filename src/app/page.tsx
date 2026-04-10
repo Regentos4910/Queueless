@@ -40,7 +40,7 @@ export default function HomePage() {
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/admin"
+              href="/admin/login?redirectTo=/admin"
               className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/80 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white"
             >
               Open Admin Dashboard

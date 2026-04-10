@@ -5,7 +5,11 @@ import { Navbar } from "@/components/Navbar";
 
 export const metadata: Metadata = {
   title: "QueueLess",
-  description: "Smart remote queue management for clinics, banks, and service counters."
+  description: "Smart remote queue management for clinics, banks, and service counters.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png"
+  }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
