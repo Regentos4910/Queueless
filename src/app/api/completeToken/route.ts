@@ -41,11 +41,15 @@ export async function POST(request: NextRequest) {
     const logs = await db()
       .collection("serviceLogs")
       .where("facilityId", "==", token.facilityId)
-      .orderBy("timestamp", "asc")
-      .limitToLast(20)
+      .orderBy("timestamp", "desc")
+      .limit(20)
       .get();
 
-    const medianServiceTime = getRollingMedian(logs.docs.map((doc) => (doc.data().serviceTime as number) ?? 3));
+    const recentServiceTimes = logs.docs
+      .map((doc) => (doc.data().serviceTime as number) ?? 3)
+      .reverse();
+
+    const medianServiceTime = getRollingMedian(recentServiceTimes);
 
     await db().collection("facilities").doc(token.facilityId).update({
       medianServiceTime
